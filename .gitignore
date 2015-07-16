@@ -1,0 +1,4 @@
+config.ini
+*.sqlite
+*.csv
+load.pl
