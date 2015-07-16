@@ -7,7 +7,7 @@ use warnings;
 sub choose {
     my $body = shift;
 
-    $body =~ s/^weather\s*(.+)//;
+    $body =~ s/^random:?\s*(.+)//;
     my @parts = split(/\s+/, $body);
 
     return $parts[rand @parts];
