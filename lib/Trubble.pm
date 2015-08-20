@@ -469,7 +469,7 @@ sub set_karma {
 sub get_ticket {
     my ($self, $ticket) = @_;
 
-    my $query = "select type, component, owner, reporter, milestone, status, summary from devtrac.ticket where id = $ticket";
+    my $query = "select type, component, owner, reporter, milestone, status, summary from trac.ticket where id = $ticket";
 
     my $db = $config->{trac}->{db};
     my $user = $config->{trac}->{db_user};
@@ -509,11 +509,12 @@ sub tick {
     my @new_pastes = grep { !defined($recent_pastes{$_}) } keys %latest_pastes;
     %recent_pastes = %latest_pastes;
 
-    foreach my $paste (@new_pastes) {
-        my $frag = $latest_pastes{$paste};
+    foreach my $key (@new_pastes) {
+        my $frag = $latest_pastes{$key}->{frag};
+        my $username = $latest_pastes{$key}->{username};
         my $base = $config->{lodgeit}->{link_base};
 
-        my $body = "somebody pasted '$frag' at $base/show/$paste/";
+        my $body = "'$username' pasted '$frag' at $base/show/$key/";
         $body =~ tr/\n/ /;
         for my $channel (keys %channels) {
             $self->say(channel => $channel, body => $body);
@@ -621,9 +622,9 @@ sub get_pastes {
     my $pass = $config->{lodgeit}->{db_pass};
     my $dbh = DBI->connect($db, $user, $pass, { sqlite_unicode => 1 });
 
-    my $res = $dbh->selectall_arrayref("select paste_id, code from pastes order by paste_id desc limit 10");
+    my $res = $dbh->selectall_arrayref("select paste_id, code, username from pastes order by paste_id desc limit 10");
 
-    my %ret = ();
+    my %pastedata = ();
     foreach my $row (@{$res}) {
         my $frag = $row->[1];
         if (!defined($frag)) {
@@ -631,13 +632,18 @@ sub get_pastes {
         }
 
         if (length($frag) > 40) {
-            $frag = substr($frag, 0, 40) . "...";
+            $frag = substr($frag, 0 ,40) . "...";
+        }
+        my $username = $row->[2];
+        if (!defined($username)) {
+            $username = "";
         }
 
-        $ret{$row->[0]} = $frag;
-    }
+        $pastedata{$row->[0]}->{username} = $username;
+        $pastedata{$row->[0]}->{frag} = $frag;
 
-    return %ret;
+    return %pastedata    
+    }
 }
 
 sub get_changes {
@@ -657,7 +663,7 @@ sub get_changes {
             oldvalue,
             newvalue
         from
-            devtrac.ticket_change
+            trac.ticket_change
         where
             field in ('status', 'owner', 'comment')
             or field like '_comment%'
@@ -752,7 +758,7 @@ sub get_tickets {
             summary,
             time
         from
-            devtrac.ticket
+            trac.ticket 
         order by
             time desc
         limit 10
@@ -824,5 +830,6 @@ END
     return %tickets;
 }
 
-return "Abadon all hope, Ye who return from here";
+return "Abandon all hope, ye who return from here"; 
+
 
